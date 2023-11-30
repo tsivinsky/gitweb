@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 
@@ -18,6 +19,22 @@ const (
 type Repo struct {
 	Name  string
 	Files []string
+}
+
+func getRepoFiles(repoPath string, gitObject string) ([]string, error) {
+	cmd := exec.Command("git", "-C", repoPath, gitObject, "--name-only")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	str := string(out)
+
+	files := []string{}
+	for _, line := range strings.Split(str, "\n") {
+		files = append(files, line)
+	}
+
+	return files, nil
 }
 
 func main() {
@@ -40,19 +57,16 @@ func main() {
 			continue // skip regular files
 		}
 
-		files, err := os.ReadDir(path.Join(GitDir, file.Name()))
-		if err != nil {
-			log.Fatal(err)
-		}
+		repoPath := path.Join(GitDir, file.Name())
 
 		repo := &Repo{
 			Name:  file.Name(),
 			Files: []string{},
 		}
 
-		for _, f := range files {
-			relativeFileName := strings.TrimPrefix(path.Join(GitDir, file.Name(), f.Name()), file.Name())
-			repo.Files = append(repo.Files, relativeFileName)
+		repo.Files, err = getRepoFiles(repoPath, "master") // hardcoded "master" for now
+		if err != nil {
+			log.Fatal(err)
 		}
 
 		repos = append(repos, repo)
