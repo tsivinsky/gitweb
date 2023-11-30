@@ -54,6 +54,8 @@ func main() {
 			relativeFileName := strings.TrimPrefix(path.Join(GitDir, file.Name(), f.Name()), file.Name())
 			repo.Files = append(repo.Files, relativeFileName)
 		}
+
+		repos = append(repos, *repo)
 	}
 
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
