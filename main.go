@@ -22,7 +22,7 @@ type Repo struct {
 }
 
 func getRepoFiles(repoPath string, gitObject string) ([]string, error) {
-	cmd := exec.Command("git", "-C", repoPath, gitObject, "--name-only")
+	cmd := exec.Command("git", "-C", repoPath, "ls-tree", gitObject, "--name-only")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
