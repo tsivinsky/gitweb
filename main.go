@@ -33,7 +33,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	repos := []Repo{}
+	repos := []*Repo{}
 
 	for _, file := range dir {
 		if !file.IsDir() {
@@ -55,7 +55,7 @@ func main() {
 			repo.Files = append(repo.Files, relativeFileName)
 		}
 
-		repos = append(repos, *repo)
+		repos = append(repos, repo)
 	}
 
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +65,7 @@ func main() {
 		}
 
 		type homePage struct {
-			Repos []Repo
+			Repos []*Repo
 		}
 
 		err = tmpl.ExecuteTemplate(w, "index.html", homePage{
@@ -92,7 +92,7 @@ func main() {
 		repo := new(Repo)
 		for _, r := range repos {
 			if r.Name == name {
-				repo = &r
+				repo = r
 			}
 		}
 
