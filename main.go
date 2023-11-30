@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -39,21 +40,18 @@ func main() {
 			continue // skip regular files
 		}
 
-		files, err := os.ReadDir(file.Name())
+		files, err := os.ReadDir(path.Join(GitDir, file.Name()))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		chunks := strings.Split(file.Name(), "/")
-		name := chunks[len(chunks)-1]
-
 		repo := &Repo{
-			Name:  name,
+			Name:  file.Name(),
 			Files: []string{},
 		}
 
 		for _, f := range files {
-			relativeFileName := strings.TrimPrefix(f.Name(), file.Name())
+			relativeFileName := strings.TrimPrefix(path.Join(GitDir, file.Name(), f.Name()), file.Name())
 			repo.Files = append(repo.Files, relativeFileName)
 		}
 	}
