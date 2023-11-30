@@ -3,15 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>gitweb</title>
+    <title>{{ .Name }}</title>
   </head>
   <body>
-    <h1>gitweb</h1>
-    <h2>repos</h2>
+    <h1>{{ .Name }}</h1>
     <div>
-      {{ range .Repos }}
+      {{ range .Files }}
       <div>
-        <span>{{.Name}}</span>
+        <h3>{{ . }}</h3>
       </div>
       {{ end }}
     </div>
