@@ -11,7 +11,7 @@
     <div>
       {{ range .Repos }}
       <div>
-        <span>{{.Name}}</span>
+        <a href="/{{.Name}}">{{.Name}}</a>
       </div>
       {{ end }}
     </div>
