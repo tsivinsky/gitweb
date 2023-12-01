@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -165,6 +166,19 @@ func getRepoCommits(repoPath string) ([]Commit, error) {
 	return commits, nil
 }
 
+func createRepo(name string) (*Repo, error) {
+	fullName := fmt.Sprintf("%s.git", name)
+
+	repoPath := path.Join(GitDir, fullName)
+	cmd := exec.Command("git", "init", "--bare", "--initial-branch", "master", repoPath)
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	return getRepo(fullName, "", false)
+}
+
 func main() {
 	tmpl, err := template.ParseGlob("./views/*.html")
 	if err != nil {
@@ -195,6 +209,36 @@ func main() {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+	})
+
+	router.HandleFunc("/new", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			err = tmpl.ExecuteTemplate(w, "new.html", struct{}{})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		if r.Method == "POST" {
+			name := r.FormValue("name")
+			if name == "" {
+				http.Error(w, "No name was provided", http.StatusBadRequest)
+				return
+			}
+
+			repo, err := createRepo(name)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			u := fmt.Sprintf("http://%s/%s/%s", r.Host, repo.Name, repo.Head)
+			http.Redirect(w, r, u, http.StatusTemporaryRedirect)
+			return
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
 	router.HandleFunc("/{repo}", func(w http.ResponseWriter, r *http.Request) {
