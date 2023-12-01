@@ -61,7 +61,7 @@ func getRepoHead(repoPath string) (string, error) {
 	return str, nil
 }
 
-func getRepo(name string, head string) (*Repo, error) {
+func getRepo(name string, head string, includeFiles bool) (*Repo, error) {
 	repoPath := path.Join(GitDir, name)
 
 	if head == "" {
@@ -78,16 +78,18 @@ func getRepo(name string, head string) (*Repo, error) {
 		Files: []string{},
 	}
 
-	files, err := getRepoFiles(repoPath, head)
-	if err != nil {
-		return nil, err
+	if includeFiles {
+		files, err := getRepoFiles(repoPath, head)
+		if err != nil {
+			return nil, err
+		}
+		repo.Files = files
 	}
-	repo.Files = files
 
 	return repo, nil
 }
 
-func getRepos() ([]*Repo, error) {
+func getRepos(includesFiles bool) ([]*Repo, error) {
 	dir, err := os.ReadDir(GitDir)
 	if err != nil {
 		return nil, err
@@ -99,7 +101,7 @@ func getRepos() ([]*Repo, error) {
 			continue // skip regular files
 		}
 
-		repo, err := getRepo(file.Name(), "")
+		repo, err := getRepo(file.Name(), "", includesFiles)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +126,7 @@ func main() {
 			return
 		}
 
-		repos, err := getRepos()
+		repos, err := getRepos(false)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -155,7 +157,7 @@ func main() {
 			return
 		}
 
-		repo, err := getRepo(name, "")
+		repo, err := getRepo(name, "", true)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -183,7 +185,7 @@ func main() {
 		name := vars["repo"]
 		head := vars["head"]
 
-		repo, err := getRepo(name, head)
+		repo, err := getRepo(name, head, true)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
