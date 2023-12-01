@@ -8,6 +8,7 @@
   <body>
     <a href="/">home page</a>
     <h1>{{ .Repo.Name }}@{{ .Repo.Head }}</h1>
+    <a href="/{{.Repo.Name}}/{{.Repo.Head}}/commits">See commits</a>
     <div>
       <h2>Branches</h2>
       <div>

@@ -22,6 +22,11 @@ type Repo struct {
 	Files []string
 }
 
+type Commit struct {
+	Hash    string
+	Message string
+}
+
 func getRepoFiles(repoPath string, gitObject string) ([]string, error) {
 	cmd := exec.Command("git", "-C", repoPath, "ls-tree", gitObject, "--name-only")
 	out, err := cmd.Output()
@@ -136,6 +141,30 @@ func getRepos(includesFiles bool) ([]*Repo, error) {
 	return repos, nil
 }
 
+func getRepoCommits(repoPath string) ([]Commit, error) {
+	cmd := exec.Command("git", "-C", repoPath, "log", "--oneline", "--no-color", "--no-decorate")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	str := string(out)
+	str = strings.TrimSpace(str)
+
+	commits := []Commit{}
+	for _, line := range strings.Split(str, "\n") {
+		parts := strings.Split(line, " ")
+		hash := parts[0]
+		message := parts[1:]
+
+		commits = append(commits, Commit{
+			Hash:    hash,
+			Message: strings.Join(message, " "),
+		})
+	}
+
+	return commits, nil
+}
+
 func main() {
 	tmpl, err := template.ParseGlob("./views/*.html")
 	if err != nil {
@@ -248,6 +277,48 @@ func main() {
 		err = tmpl.ExecuteTemplate(w, "repo.html", repoPage{
 			Repo:     *repo,
 			Branches: branches,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+
+	router.HandleFunc("/{repo}/{head}/commits", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		vars := mux.Vars(r)
+		name := vars["repo"]
+		head := vars["head"]
+
+		repo, err := getRepo(name, head, false)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if repo == nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		commits, err := getRepoCommits(path.Join(GitDir, name))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		type commitsPage struct {
+			Repo
+			Commits []Commit
+		}
+
+		err = tmpl.ExecuteTemplate(w, "commits.html", commitsPage{
+			Repo:    *repo,
+			Commits: commits,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
