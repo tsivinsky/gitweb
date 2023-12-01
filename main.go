@@ -58,6 +58,55 @@ func getRepoHead(repoPath string) (string, error) {
 	return str, nil
 }
 
+func getRepo(name string, head string) (*Repo, error) {
+	repoPath := path.Join(GitDir, name)
+
+	if head == "" {
+		str, err := getRepoHead(repoPath)
+		if err != nil {
+			return nil, err
+		}
+		head = str
+	}
+
+	repo := &Repo{
+		Name:  name,
+		Head:  head,
+		Files: []string{},
+	}
+
+	files, err := getRepoFiles(repoPath, head)
+	if err != nil {
+		return nil, err
+	}
+	repo.Files = files
+
+	return repo, nil
+}
+
+func getRepos() ([]*Repo, error) {
+	dir, err := os.ReadDir(GitDir)
+	if err != nil {
+		return nil, err
+	}
+
+	repos := []*Repo{}
+	for _, file := range dir {
+		if !file.IsDir() {
+			continue // skip regular files
+		}
+
+		repo, err := getRepo(file.Name(), "")
+		if err != nil {
+			return nil, err
+		}
+
+		repos = append(repos, repo)
+	}
+
+	return repos, nil
+}
+
 func main() {
 	tmpl, err := template.ParseGlob("./views/*.html")
 	if err != nil {
@@ -66,42 +115,15 @@ func main() {
 
 	router := mux.NewRouter()
 
-	dir, err := os.ReadDir(GitDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	repos := []*Repo{}
-
-	for _, file := range dir {
-		if !file.IsDir() {
-			continue // skip regular files
-		}
-
-		repoPath := path.Join(GitDir, file.Name())
-
-		head, err := getRepoHead(repoPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		repo := &Repo{
-			Name:  file.Name(),
-			Head:  head,
-			Files: []string{},
-		}
-
-		repo.Files, err = getRepoFiles(repoPath, head)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		repos = append(repos, repo)
-	}
-
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		repos, err := getRepos()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -130,15 +152,42 @@ func main() {
 			return
 		}
 
-		repo := new(Repo)
-		for _, r := range repos {
-			if r.Name == name {
-				repo = r
-			}
+		repo, err := getRepo(name, "")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		if repo == nil {
 			http.Error(w, "Repo not found", http.StatusNotFound)
+			return
+		}
+
+		err = tmpl.ExecuteTemplate(w, "repo.html", repo)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+
+	router.HandleFunc("/{repo}/{head}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		vars := mux.Vars(r)
+		name := vars["repo"]
+		head := vars["head"]
+
+		repo, err := getRepo(name, head)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if repo == nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
