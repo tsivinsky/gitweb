@@ -13,7 +13,12 @@
       <div>
         {{ range .Branches }}
         <div>
-          <a href="/{{$.Repo.Name}}/{{.}}">{{ . }}</a>
+          <a href="/{{$.Repo.Name}}/{{.}}">
+            <span>{{ . }}</span>
+            {{ if eq . $.Repo.Head }}
+            <span> *</span>
+            {{ end }}
+          </a>
         </div>
         {{ end }}
       </div>
