@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	GitDir = "/srv/git"
+	GitDir = "/home/git"
 )
 
 type Repo struct {
@@ -119,6 +119,10 @@ func getRepos(includesFiles bool) ([]*Repo, error) {
 	for _, file := range dir {
 		if !file.IsDir() {
 			continue // skip regular files
+		}
+
+		if !strings.HasSuffix(file.Name(), ".git") {
+			continue // skip directories w/o .git at the end
 		}
 
 		repo, err := getRepo(file.Name(), "", includesFiles)
