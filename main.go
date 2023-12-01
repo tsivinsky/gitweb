@@ -58,7 +58,7 @@ func getRepoHead(repoPath string) (string, error) {
 		str = string(out)
 	}
 
-	return str, nil
+	return strings.TrimSpace(str), nil
 }
 
 func getRepo(name string, head string, includeFiles bool) (*Repo, error) {
