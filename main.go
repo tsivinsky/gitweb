@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -45,6 +46,8 @@ func getRepoFiles(repoPath string, gitObject string) ([]string, error) {
 	return files, nil
 }
 
+var ErrEmptyRepository = errors.New("Empty repository")
+
 func getRepoHead(repoPath string) (string, error) {
 	cmd := exec.Command("git", "-C", repoPath, "rev-parse", "--abbrev-ref", "HEAD")
 	out, err := cmd.Output()
@@ -59,7 +62,7 @@ func getRepoHead(repoPath string) (string, error) {
 		out, err = cmd.Output()
 		if err != nil {
 			log.Printf("git rev-parse HEAD failed repoPath=%s output=%s", repoPath, string(out))
-			return "", err
+			return "", ErrEmptyRepository
 		}
 		str = string(out)
 	}
@@ -228,6 +231,11 @@ func main() {
 			}
 
 			repo, err := createRepo(name)
+			if errors.Is(err, ErrEmptyRepository) {
+				u := fmt.Sprintf("http://%s/%s", r.Host, name)
+				http.Redirect(w, r, u, http.StatusTemporaryRedirect)
+				return
+			}
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -254,7 +262,26 @@ func main() {
 			return
 		}
 
-		repo, err := getRepo(name, "", true)
+		repo, err := getRepo(name, "", false)
+		if repo.Head == "HEAD" {
+			type emptyRepoPage struct {
+				Repo
+				CloneUrl string
+			}
+			cloneUrl := fmt.Sprintf("git@git.tsivinsky.com:%s", name)
+			err = tmpl.ExecuteTemplate(w, "empty-repo.html", emptyRepoPage{
+				Repo: Repo{
+					Name:  name,
+					Head:  "HEAD",
+					Files: []string{},
+				},
+				CloneUrl: cloneUrl,
+			})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -265,25 +292,8 @@ func main() {
 			return
 		}
 
-		branches, err := getRepoBranches(path.Join(GitDir, name))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
-		type repoPage struct {
-			Repo
-			Branches []string
-		}
-
-		err = tmpl.ExecuteTemplate(w, "repo.html", repoPage{
-			Repo:     *repo,
-			Branches: branches,
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		u := fmt.Sprintf("http://%s/%s/%s", r.Host, repo.Name, repo.Head)
+		http.Redirect(w, r, u, http.StatusTemporaryRedirect)
 	})
 
 	router.HandleFunc("/{repo}/{head}", func(w http.ResponseWriter, r *http.Request) {
@@ -297,6 +307,25 @@ func main() {
 		head := vars["head"]
 
 		repo, err := getRepo(name, head, true)
+		if errors.Is(err, ErrEmptyRepository) {
+			type emptyRepoPage struct {
+				Repo
+				CloneUrl string
+			}
+			cloneUrl := fmt.Sprintf("git@git.tsivinsky.com:%s", name)
+			err = tmpl.ExecuteTemplate(w, "empty-repo.html", emptyRepoPage{
+				Repo: Repo{
+					Name:  name,
+					Head:  "HEAD",
+					Files: []string{},
+				},
+				CloneUrl: cloneUrl,
+			})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
