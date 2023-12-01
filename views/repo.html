@@ -3,13 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ .Name }}</title>
+    <title>{{ .Repo.Name }}</title>
   </head>
   <body>
     <a href="/">home page</a>
-    <h1>{{ .Name }}@{{ .Head }}</h1>
+    <h1>{{ .Repo.Name }}@{{ .Repo.Head }}</h1>
     <div>
-      {{ range .Files }}
+      <h2>Branches</h2>
+      <div>
+        {{ range .Branches }}
+        <div>
+          <a href="/{{$.Repo.Name}}/{{.}}">{{ . }}</a>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    <div>
+      <h2>Files</h2>
+      {{ range .Repo.Files }}
       <div>
         <span>{{ . }}</span>
       </div>

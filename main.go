@@ -89,6 +89,26 @@ func getRepo(name string, head string, includeFiles bool) (*Repo, error) {
 	return repo, nil
 }
 
+func getRepoBranches(repoPath string) ([]string, error) {
+	cmd := exec.Command("git", "-C", repoPath, "branch", "--no-color")
+	out, err := cmd.Output()
+	if err != nil {
+		log.Printf("git branch --no-color failed repoPath=%s", repoPath)
+		return nil, err
+	}
+	str := string(out)
+
+	branches := []string{}
+	for _, line := range strings.Split(str, "\n") {
+		line = strings.ReplaceAll(line, "*", "")
+		line = strings.TrimSpace(line)
+
+		branches = append(branches, line)
+	}
+
+	return branches, nil
+}
+
 func getRepos(includesFiles bool) ([]*Repo, error) {
 	dir, err := os.ReadDir(GitDir)
 	if err != nil {
@@ -168,7 +188,21 @@ func main() {
 			return
 		}
 
-		err = tmpl.ExecuteTemplate(w, "repo.html", repo)
+		branches, err := getRepoBranches(path.Join(GitDir, name))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		type repoPage struct {
+			Repo
+			Branches []string
+		}
+
+		err = tmpl.ExecuteTemplate(w, "repo.html", repoPage{
+			Repo:     *repo,
+			Branches: branches,
+		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -196,7 +230,21 @@ func main() {
 			return
 		}
 
-		err = tmpl.ExecuteTemplate(w, "repo.html", repo)
+		branches, err := getRepoBranches(path.Join(GitDir, name))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		type repoPage struct {
+			Repo
+			Branches []string
+		}
+
+		err = tmpl.ExecuteTemplate(w, "repo.html", repoPage{
+			Repo:     *repo,
+			Branches: branches,
+		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
