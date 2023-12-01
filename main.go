@@ -179,7 +179,7 @@ func createRepo(name string) (*Repo, error) {
 		return nil, err
 	}
 
-	return getRepo(fullName, "", false)
+	return getRepo(fullName, "HEAD", false)
 }
 
 func main() {
@@ -231,9 +231,9 @@ func main() {
 			}
 
 			repo, err := createRepo(name)
-			if errors.Is(err, ErrEmptyRepository) {
-				u := fmt.Sprintf("http://%s/%s", r.Host, name)
-				http.Redirect(w, r, u, http.StatusTemporaryRedirect)
+			if repo != nil && repo.Head == "HEAD" {
+				u := fmt.Sprintf("http://%s/%s", r.Host, repo.Name)
+				http.Redirect(w, r, u, http.StatusSeeOther)
 				return
 			}
 			if err != nil {
@@ -263,7 +263,7 @@ func main() {
 		}
 
 		repo, err := getRepo(name, "", false)
-		if repo.Head == "HEAD" {
+		if repo != nil && repo.Head == "HEAD" {
 			type emptyRepoPage struct {
 				Repo
 				CloneUrl string
