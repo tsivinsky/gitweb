@@ -26,6 +26,7 @@ func getRepoFiles(repoPath string, gitObject string) ([]string, error) {
 	cmd := exec.Command("git", "-C", repoPath, "ls-tree", gitObject, "--name-only")
 	out, err := cmd.Output()
 	if err != nil {
+		log.Printf("git ls-tree failed repoPath=%s gitObject=%s output=%s", repoPath, gitObject, string(out))
 		return nil, err
 	}
 	str := string(out)
@@ -42,6 +43,7 @@ func getRepoHead(repoPath string) (string, error) {
 	cmd := exec.Command("git", "-C", repoPath, "rev-parse", "--abbrev-ref", "HEAD")
 	out, err := cmd.Output()
 	if err != nil {
+		log.Printf("git rev-parse --abbrev-ref HEAD failed repoPath=%s output=%s", repoPath, string(out))
 		return "", err
 	}
 	str := string(out)
@@ -50,6 +52,7 @@ func getRepoHead(repoPath string) (string, error) {
 		cmd = exec.Command("git", "-C", repoPath, "rev-parse", "HEAD")
 		out, err = cmd.Output()
 		if err != nil {
+			log.Printf("git rev-parse HEAD failed repoPath=%s output=%s", repoPath, string(out))
 			return "", err
 		}
 		str = string(out)
