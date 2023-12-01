@@ -6,11 +6,11 @@
     <title>{{ .Name }}</title>
   </head>
   <body>
-    <h1>{{ .Name }}</h1>
+    <h1>{{ .Name }}@{{ .Head }}</h1>
     <div>
       {{ range .Files }}
       <div>
-        <h3>{{ . }}</h3>
+        <span>{{ . }}</span>
       </div>
       {{ end }}
     </div>

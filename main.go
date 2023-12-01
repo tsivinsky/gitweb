@@ -18,6 +18,7 @@ const (
 
 type Repo struct {
 	Name  string
+	Head  string
 	Files []string
 }
 
@@ -35,6 +36,26 @@ func getRepoFiles(repoPath string, gitObject string) ([]string, error) {
 	}
 
 	return files, nil
+}
+
+func getRepoHead(repoPath string) (string, error) {
+	cmd := exec.Command("git", "-C", repoPath, "rev-parse", "--abbrev-ref", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	str := string(out)
+
+	if str == "HEAD" {
+		cmd = exec.Command("git", "-C", repoPath, "rev-parse", "HEAD")
+		out, err = cmd.Output()
+		if err != nil {
+			return "", err
+		}
+		str = string(out)
+	}
+
+	return str, nil
 }
 
 func main() {
@@ -59,12 +80,18 @@ func main() {
 
 		repoPath := path.Join(GitDir, file.Name())
 
+		head, err := getRepoHead(repoPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		repo := &Repo{
 			Name:  file.Name(),
+			Head:  head,
 			Files: []string{},
 		}
 
-		repo.Files, err = getRepoFiles(repoPath, "master") // hardcoded "master" for now
+		repo.Files, err = getRepoFiles(repoPath, head)
 		if err != nil {
 			log.Fatal(err)
 		}
