@@ -262,6 +262,10 @@ func main() {
 			return
 		}
 
+		if !strings.HasSuffix(name, ".git") {
+			name = name + ".git"
+		}
+
 		repo, err := getRepo(name, "", false)
 		if repo != nil && repo.Head == "HEAD" {
 			type emptyRepoPage struct {
@@ -305,6 +309,10 @@ func main() {
 		vars := mux.Vars(r)
 		name := vars["repo"]
 		head := vars["head"]
+
+		if !strings.HasSuffix(name, ".git") {
+			name = name + ".git"
+		}
 
 		repo, err := getRepo(name, head, true)
 		if errors.Is(err, ErrEmptyRepository) {
